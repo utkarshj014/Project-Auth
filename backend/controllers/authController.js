@@ -62,7 +62,7 @@ export const signup = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
-  const { code, email } = req.body;
+  const { verificationCode, email } = req.body;
 
   try {
     if (!email) {
@@ -71,7 +71,7 @@ export const verifyEmail = async (req, res) => {
         .json({ success: false, message: "Email is required!!" });
     }
 
-    if (!code) {
+    if (!verificationCode) {
       return res
         .status(400)
         .json({ success: false, message: "Verification code is required!!" });
@@ -79,12 +79,12 @@ export const verifyEmail = async (req, res) => {
 
     const user = await User.findOne({
       email: email,
-      verificationToken: code,
+      verificationToken: verificationCode,
       verificationTokenExpiresAt: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: "Invalid or expired verification code!!",
       });
@@ -122,7 +122,7 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res
-        .status(400)
+        .status(401)
         .json({ success: false, message: "Invalid credentials!" });
     }
 
@@ -133,13 +133,20 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid credentials!" });
     }
 
+    // if Not Verified
     if (!user.isVerified) {
-      const verificationToken = Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-
-      user.verificationToken = verificationToken;
-      user.verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      if (
+        !user.verificationToken ||
+        !user.verificationTokenExpiresAt ||
+        user.verificationTokenExpiresAt < Date.now()
+      ) {
+        const verificationToken = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString();
+        user.verificationToken = verificationToken;
+        user.verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      }
+      await sendVerificationEmail(email, user.name, user.verificationToken);
     }
 
     user.lastLogin = Date.now();
@@ -148,11 +155,6 @@ export const login = async (req, res) => {
 
     // jwt
     generateTokenAndSetCookie(res, user._id);
-
-    // if Not Verified
-    if (!user.isVerified) {
-      await sendVerificationEmail(email, user.name, verificationToken);
-    }
 
     return res.status(200).json({
       success: true,
