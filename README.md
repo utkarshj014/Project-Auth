@@ -60,7 +60,7 @@ CLIENT_URL=http://localhost:5173
 1. **Clone the repo**
 
 ```bash
-git clone https://github.com/yourusername/project-auth.git
+git clone https://github.com/utkarshj014/Project-Auth.git
 cd project-auth
 ```
 
@@ -85,7 +85,7 @@ npm run dev
 
 # 📦 Deployment
 
-Frontend & Backend deployed on **Render**
+Frontend & Backend deployed on **Render**.
 Uses environment variables for switching between development and production environments
 
 
